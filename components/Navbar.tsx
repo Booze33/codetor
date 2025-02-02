@@ -11,10 +11,9 @@ import { Button } from '@/components/ui/button';
 const Navbar = () => {
   const router = useRouter();
   const [loggedIn, setLoggedIn] = useState(false);
-  const [user, setUser] = useState({});
+  const [user, setUser] = useState<User | null>(null);
   const [theme, setTheme] = useState('system');
   const { isOpen, toggleSidebar } = useSidebarToggle();
-  const element = document.documentElement;
 
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme");
@@ -27,6 +26,7 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
+    const element = document.documentElement;
     if (theme === 'dark') {
       element.classList.add("dark");
       localStorage.setItem("theme", "dark");
@@ -42,7 +42,7 @@ const Navbar = () => {
       }
       localStorage.setItem("theme", "system");
 
-      const themeChangeHandler = (e) => {
+      const themeChangeHandler = (e: MediaQueryListEvent) => {
         if (e.matches) {
           element.classList.add("dark");
         } else {
@@ -53,7 +53,7 @@ const Navbar = () => {
       darkQuery.addEventListener("change", themeChangeHandler);
       return () => darkQuery.removeEventListener("change", themeChangeHandler);
     }
-  }, [theme, element]);
+  }, [theme]);
 
   useEffect(() => {
     const checkLoggedInStatus = async () => {
@@ -95,7 +95,7 @@ const Navbar = () => {
       <div className="flex items-center gap-4">
         {loggedIn ? (
           <div className="flex items-center gap-4">
-            <div>Hello, {user.firstName || 'User'}</div>
+            <div>Hello, {user?.firstName || 'User'}</div>
             <Button onClick={handleLogout} className="bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-800 rounded-md px-4 py-2">Logout</Button>
           </div>
         ) : (

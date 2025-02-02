@@ -19,9 +19,9 @@ declare type LoginUser = {
 
 declare type User = {
   $id: string;
-  email: string;
-  userId: string;
-  firstName: string;
+  email?: string;
+  user_id: string;
+  firstName?: string;
   lastName: string;
 };
 
@@ -43,4 +43,10 @@ declare interface signInProps {
 
 declare interface getUserInfoProps {
   user_id: string;
+}
+
+declare interface Chat {
+  $id: string;
+  chat_id: string;
+  title: string;
 }
