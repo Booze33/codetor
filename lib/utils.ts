@@ -1,11 +1,11 @@
-/* eslint-disable no-prototype-builtins */
-import { type ClassValue, clsx } from "clsx";
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
 import qs from "query-string";
-import { twMerge } from "tailwind-merge";
 import { z } from "zod";
 
+
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
 export const parseStringify = (value: any) => JSON.parse(JSON.stringify(value));
@@ -32,14 +32,6 @@ export function formUrlQuery({ params, key, value }: UrlQueryParams) {
     },
     { skipNull: true }
   );
-}
-
-export function encryptId(id: string) {
-  return btoa(id);
-}
-
-export function decryptId(id: string) {
-  return atob(id);
 }
 
 export const authFormSchema = (type: string) => z.object({
