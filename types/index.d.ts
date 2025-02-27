@@ -42,5 +42,5 @@ declare interface signInProps {
 }
 
 declare interface getUserInfoProps {
-  userId: string;
+  user_id: string;
 }

@@ -10,14 +10,14 @@ const {
   APPWRITE_USER_COLLECTION_ID: USER_COLLECTION_ID,
 } = process.env;
 
-export const getUserInfo = async ({ userId }: getUserInfoProps) => {
+export const getUserInfo = async ({ user_id }: getUserInfoProps) => {
   try {
     const { database } = await createAdminClient();
 
     const user = await database.listDocuments(
       DATABASE_ID!,
       USER_COLLECTION_ID!,
-      [Query.equal('userId', [userId])]
+      [Query.equal('user_id', [user_id])]
     )
 
     return parseStringify(user.documents[0]);
@@ -28,7 +28,7 @@ export const getUserInfo = async ({ userId }: getUserInfoProps) => {
 
 export const signIn = async ({ email, password }: signInProps) => {
   try {
-    const { account } = await createSessionClient();
+    const { account } = await createAdminClient();
     const session = await account.createEmailPasswordSession(email, password);
 
     (await cookies()).set("appwrite-session", session.secret, {
@@ -38,7 +38,7 @@ export const signIn = async ({ email, password }: signInProps) => {
       secure: true,
     });
 
-    const user = await getUserInfo({ userId: session.userId }) 
+    const user = await getUserInfo({ user_id: session.userId }) 
 
     return parseStringify(user);
   } catch (error) {
@@ -69,9 +69,11 @@ export const signUp = async ({ password, ...userData }: SignUpParams) => {
       ID.unique(),
       {
         ...userData,
-        userId: newUserAccount.$id,
+        user_id: newUserAccount.$id,
       }
     )
+
+    console.log('UserData', newUser);
 
     const session = await account.createEmailPasswordSession(email, password);
 
@@ -93,7 +95,7 @@ export async function getLoggedInUser() {
     const { account } = await createSessionClient();
     const result = await account.get();
 
-    const user = await getUserInfo({ userId: result.$id})
+    const user = await getUserInfo({ user_id: result.$id})
 
     return parseStringify(user);
   } catch (error) {

@@ -49,6 +49,8 @@ const AuthForm = ({ type }: { type: string }) => {
           const newUser = await signUp(userData);
 
           setUser(newUser);
+
+          if(newUser) router.push('/')
         }
 
         if(type === 'sign-in') {
@@ -137,7 +139,7 @@ const AuthForm = ({ type }: { type: string }) => {
               ? "Don't have an account?"
               : "Already have an account?"}
             </p>
-            <Link href={type === 'sign-in' ? '/sign-up' : '/sign-in'} className="form-link">
+            <Link href={type === 'sign-in' ? '/sign_up' : '/sign_in'} className="form-link">
               {type === 'sign-in' ? 'Sign up' : 'Sign in'}
             </Link>
           </footer>
