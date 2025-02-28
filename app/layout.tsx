@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import PanelLayout from '@/components/PanelLayout';
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -23,11 +24,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" class="dark">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <PanelLayout>
+          {children}
+        </PanelLayout>
       </body>
     </html>
   );
