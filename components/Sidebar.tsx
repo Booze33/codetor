@@ -81,7 +81,7 @@ const Sidebar = () => {
             chats.map((chat) => (
               <Link
                 key={chat.$id}
-                href={`/chat/${chat.$id}`}
+                href={`/chat/${chat.chat_id}`}
                 className="flex items-center gap-2 hover:bg-gray-300 dark:hover:bg-gray-700 p-2 rounded truncate"
               >
                 <MessageSquare size={16} />

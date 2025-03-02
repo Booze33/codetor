@@ -50,3 +50,16 @@ declare interface Chat {
   chat_id: string;
   title: string;
 }
+
+declare type ChatPageProps =  {
+  params: { chat_id: string };
+}
+
+declare type MessageProps = {
+  $id: string;
+  user_id: string;
+  chat_id: string;
+  sender: string;
+  content: string;
+  created_at: Date;
+};
