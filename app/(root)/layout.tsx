@@ -1,3 +1,5 @@
+import PanelLayout from '@/components/PanelLayout';
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -7,9 +9,9 @@ export default async function RootLayout({
   return (
     <main className="flex h-screen w-full font-inter">
       <div className="flex size-full flex-col">
-        <div className="root-layout">
-        </div>
-        {children}
+        <PanelLayout>
+          {children}
+        </PanelLayout>
       </div>
     </main>
   );

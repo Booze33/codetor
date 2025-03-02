@@ -50,16 +50,17 @@ const ChatPage = ({ params }: ChatPageProps) => {
 
   useEffect(() => {
     const connectWebSocket = () => {
-      wsRef.current = new WebSocket("https://socket-prioprity-pro.onrender.com");
+      wsRef.current = new WebSocket("ws://socket-prioprity-pro.onrender.com");
 
       wsRef.current.onopen = () => {
         console.log('WebSocket connected');
-        console.log(chat_id);
       };
 
       wsRef.current.onmessage = (event) => {
+        console.log(event);
         try {
           const messageData = JSON.parse(event.data);
+          console.log(messageData);
           if (messageData.type === 'message') {
             setMessages(prev => [...prev, messageData.data]);
             console.log('websocket test completed');
@@ -104,10 +105,8 @@ const ChatPage = ({ params }: ChatPageProps) => {
 
         if(!fetchedChat) {
           throw new Error('Chat not found - no data returned');
-          console.error('Chat no found- no data returned');
         } else if (!Array.isArray(fetchedChat) && fetchedChat.length === 0) {
           throw new Error('Chat not found - empty array returned');
-          console.error('Chat not found - empty array returned');
         }
         setChat(fetchedChat[0]);
 
@@ -132,16 +131,15 @@ const ChatPage = ({ params }: ChatPageProps) => {
 
     try {
       const messageData = {
-        type: 'message',
-        data: {
-          $id: `temp-${Date.now()}`,
-          sender: 'user',
-          content: newMessage,
-          chat_id: chat_id,
-          user_id: currentUser.user_id,
-          timestamp: new Date().toISOString()
-        }
+        $id: `temp-${Date.now()}`,
+        sender: 'user',
+        content: newMessage,
+        chat_id: chat_id,
+        user_id: currentUser.user_id,
+        timestamp: new Date().toISOString()
       };
+
+      setMessages(prev => [...prev, messageData])
 
       if (wsRef.current) {
         wsRef.current.send(JSON.stringify(messageData));
@@ -217,7 +215,7 @@ const ChatPage = ({ params }: ChatPageProps) => {
           onChange={(e) => setNewMessage(e.target.value)}
           onKeyDown={handleKeyPress}
           placeholder="Type a message..."
-          className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
           rows={2}
         />
         <button 
