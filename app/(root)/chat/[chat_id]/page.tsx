@@ -50,7 +50,7 @@ const ChatPage = ({ params }: ChatPageProps) => {
 
   useEffect(() => {
     const connectWebSocket = () => {
-      wsRef.current = new WebSocket("ws://socket-prioprity-pro.onrender.com");
+      wsRef.current = new WebSocket("https://socket-prioprity-pro.onrender.com");
 
       wsRef.current.onopen = () => {
         console.log('WebSocket connected');
