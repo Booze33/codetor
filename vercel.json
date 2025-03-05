@@ -1,7 +1,25 @@
 {
   "functions": {
-    "api/**/*.js": {
+    "app/(root)/**/*.js": {
       "maxDuration": 50
+    },
+    "app/(auth)/**/*.js": {
+      "maxDuration": 30
+    },
+    "api/**/*.js": {
+      "maxDuration": 25
     }
-  }
+  },
+  "routes": [
+    {
+      "src": "/chat/(.*)",
+      "dest": "app/(root)/chat/[chat_id]/page.tsx"
+    }
+  ],
+  "builds": [
+    {
+      "src": "next.config.js",
+      "use": "@vercel/next"
+    }
+  ]
 }
