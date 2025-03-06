@@ -15,11 +15,5 @@
       "src": "/chat/(.*)",
       "dest": "app/(root)/chat/[chat_id]/page.tsx"
     }
-  ],
-  "builds": [
-    {
-      "src": "next.config.js",
-      "use": "@vercel/next"
-    }
   ]
 }
