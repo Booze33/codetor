@@ -1,9 +1,9 @@
 {
   "functions": {
-    "app/(root)/**/*.js": {
-      "maxDuration": 50
+    "app/(root)/**/*.ts": {
+      "maxDuration": 90
     },
-    "app/(auth)/**/*.js": {
+    "app/(auth)/**/*.ts": {
       "maxDuration": 30
     }
   },

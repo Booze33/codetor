@@ -20,3 +20,30 @@ code-mentor/
 │── next.config.js                 # Next.js configuration
 │── tailwind.config.js             # Tailwind CSS config
 │── README.md                      # Project documentation
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{
+  "functions": {
+    "app/(root)/**/*.js": {
+      "maxDuration": 60
+    },
+    "app/(auth)/**/*.js": {
+      "maxDuration": 60
+    },
+    "api/**/*.js": {
+      "maxDuration": 60
+    }
+  }
+}
