@@ -122,58 +122,30 @@ export const getChat = async (chat_id: string) => {
   }
 }
 
-export const createMessage = async (chat_id: string, user_id: string, content: string) => {
+export const sendAIMessage = async (chat_id: string, user_id: string, content: string) => {
   try {
     const { database } = await createAdminClient();
-
-    const userMessage = await database.createDocument(
-      DATABASE_ID!,
-      MESSAGE_COLLECTION_ID!,
-      ID.unique(),
-      {
-        chat_id: chat_id,
-        user_id: user_id,
-        sender: 'user',
-        content: content,
-        created_at: new Date(),
-      }
-    );
 
     const aiMessageContent = await generateAIResponse([
       { role: "user", content }
     ]);
-
-    const newTitle = await generateChatTitle(content);
 
     const aiMessage = await database.createDocument(
       DATABASE_ID!,
       MESSAGE_COLLECTION_ID!,
       ID.unique(),
       {
-        chat_id: chat_id,
-        user_id: user_id,
-        sender: 'ai',
+        chat_id,
+        user_id,
+        sender: "ai",
         content: aiMessageContent,
         created_at: new Date(),
       }
     );
 
-    const chat = await getChat(chat_id);
-
-    if (chat.length > 0 && chat[0].title === "New Chat") {
-      await database.updateDocument(
-        DATABASE_ID!,
-        CHAT_COLLECTION_ID!,
-        chat[0].$id,
-        {
-          title: newTitle,
-        }
-      );
-    }
-
-    return parseStringify([userMessage, aiMessage])
+    return parseStringify(aiMessage)
   } catch (error) {
-    console.error("Error creating message:", error)
+    return handleError('sendAIMessage', error);
   }
 }
 
@@ -209,53 +181,85 @@ export const sendMessage = async (chat_id: string, user_id: string, content: str
         }
       );
 
-      const previousMessages = await database.listDocuments(
-        DATABASE_ID!,
-        MESSAGE_COLLECTION_ID!,
-        [Query.equal("chat_id", chat_id), Query.orderAsc("created_at")]
-      );
-  
-      const conversationHistory = previousMessages.documents.map((msg) => {
-        return {
-          role: (msg.sender === "user" ? "user" : "assistant") as "user" | "assistant",
-          content: msg.content
-        };
-      });
-  
-      const aiMessageContent = await generateAIResponse([
-        ...conversationHistory,
-        { role: 'user', content }
-      ]);
+      return parseStringify(userMessage);
+  } catch (error) {
+    console.error("Error sending message:", error);
+  }
+};
 
-      const aiMessage = await database.createDocument(
-        DATABASE_ID!,
-        MESSAGE_COLLECTION_ID!,
-        ID.unique(),
-        {
-          chat_id,
-          user_id,
-          sender: "ai",
-          content: aiMessageContent,
-          created_at: new Date(),
-        }
-      );
+export const sendAiMessage = async (chat_id: string, user_id: string, content: string) => {
+  try {
+    const { database } = await createAdminClient();
 
-      const chat = await getChat(chat_id);
-    if (chat && chat.length > 0 && chat[0].title === "New Chat") {
-      const newTitle = await generateChatTitle(content);
+    const previousMessages = await database.listDocuments(
+      DATABASE_ID!,
+      MESSAGE_COLLECTION_ID!,
+      [
+        Query.equal("chat_id", chat_id),
+        Query.orderAsc("created_at"),
+        Query.limit(20)
+      ]
+    );
 
+    const conversationHistory = previousMessages.documents.map((msg) => {
+      return {
+        role: (msg.sender === "user" ? "user" : "assistant") as "user" | "assistant",
+        content: msg.content
+      };
+    });
+
+    const aiMessageContent = await generateAIResponse([
+      ...conversationHistory,
+      { role: "user", content }
+    ]);
+
+    const aiMessage = await database.createDocument(
+      DATABASE_ID!,
+      MESSAGE_COLLECTION_ID!,
+      ID.unique(),
+      {
+        chat_id,
+        user_id,
+        sender: "ai",
+        content: aiMessageContent,
+        created_at: new Date(),
+      }
+    );
+
+    return parseStringify(aiMessage)
+  } catch (error) {
+    return handleError('sendAIMessage', error);
+  }
+}
+
+export const writeTitle = async (chat_id: string, content: string) => {
+  try {
+    const { database } = await createAdminClient();
+
+    const chatResults = await database.listDocuments(
+      DATABASE_ID!,
+      CHAT_COLLECTION_ID!,
+      [Query.equal('chat_id', [chat_id])]
+    );
+
+    if (!chatResults.documents.length) {
+      console.error('Chat not found');
+      return null;
+    }
+
+    const newTitle = await generateChatTitle(content);
+
+    if (newTitle) {
       await database.updateDocument(
         DATABASE_ID!,
         CHAT_COLLECTION_ID!,
-        chat[0].$id,
-        {
-          title: newTitle,
-        }
+        chatResults.documents[0].$id,
+        { title: newTitle }
       );
     }
 
-      return parseStringify([userMessage, aiMessage]);
+    return newTitle;
   } catch (error) {
-    console.error("Error sending message:", error);
+    return handleError('writeTitle', error);
   }
 };

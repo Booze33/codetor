@@ -1,11 +1,9 @@
 'use client';
 
-import { getChat } from '@/lib/actions/chat.action';
-import { getMessages, sendMessage } from '@/lib/actions/chat.action';
-import { useEffect, useRef, useState } from 'react';
+import { getChat, getMessages, sendMessage, sendAiMessage, writeTitle } from '@/lib/actions/chat.action';
+import { useEffect, useRef, useState, useCallback, use } from 'react';
 import { getLoggedInUser } from '@/lib/actions/user.action';
 import { Textarea } from '@/components/ui/textarea';
-import { use } from 'react';
 
 interface MessageProps {
   $id: string;
@@ -29,136 +27,139 @@ interface ChatPageProps {
   }>;
 }
 
-const ChatPage = ({ params }: ChatPageProps) => {
-  const { chat_id } = use(params);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [newMessage, setNewMessage] = useState("");
+const useWebSocket = () => {
   const [messages, setMessages] = useState<MessageProps[]>([]);
-  const [chat, setChat] = useState<Chat | null>(null);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const connectWebSocket = useCallback(() => {
+    if (wsRef.current) return;
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    const ws = new WebSocket("wss://socket-prioprity-pro.onrender.com");
+    wsRef.current = ws;
 
-  useEffect(() => {
-    const connectWebSocket = () => {
-      wsRef.current = new WebSocket("wss://socket-prioprity-pro.onrender.com");
+    ws.onopen = () => console.log('WebSocket connected');
 
-      wsRef.current.onopen = () => {
-        console.log('WebSocket connected');
-      };
-
-      wsRef.current.onmessage = (event) => {
-        console.log(event);
-        try {
-          const messageData = JSON.parse(event.data);
-          console.log(messageData);
-          if (messageData.type === 'message') {
-            setMessages(prev => [...prev, messageData.data]);
-            console.log('websocket test completed');
-          }
-        } catch (error) {
-          console.error('Error processing message:', error);
+    ws.onmessage = (event) => {
+      try {
+        const messageData = JSON.parse(event.data);
+        if (messageData.type === 'message') {
+          setMessages((prev) => [...prev, messageData.data]);
         }
-      };
-
-      wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
-      };
-
-      wsRef.current.onclose = () => {
-        console.log('WebSocket disconnected');
-        setTimeout(connectWebSocket, 3000);
-      };
-    };
-
-    connectWebSocket();
-
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
+      } catch (error) {
+        console.error('WebSocket message error:', error);
       }
     };
-  }, [chat_id]);
+
+    ws.onclose = () => {
+      console.log('WebSocket disconnected. Reconnecting in 3 seconds...');
+      wsRef.current = null; // Allow reconnection
+      setTimeout(connectWebSocket, 3000);
+    };
+  }, []);
 
   useEffect(() => {
-    const initializeChat = async () => {
+    connectWebSocket();
+    return () => wsRef.current?.close(); // Cleanup on unmount
+  }, [connectWebSocket]);
+
+  const sendWebSocketMessage = useCallback((message: MessageProps) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(message));
+    }
+  }, []);
+
+  return { messages, setMessages, sendWebSocketMessage };
+};
+
+const useChatInitialization = (chat_id: string) => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [chat, setChat] = useState<Chat | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [messages, setMessages] = useState<MessageProps[]>([]);
+
+  useEffect(() => {
+    (async () => {
       try {
         setLoading(true);
+        const [user, fetchedChat, chatMessages] = await Promise.all([
+          getLoggedInUser(),
+          getChat(chat_id),
+          getMessages(chat_id),
+        ]);
 
-        const user = await getLoggedInUser();
-        if (!user) {
-          throw new Error('No user found');
-        }
+        if (!user) throw new Error('No user found');
+        if (!fetchedChat?.length) throw new Error('Chat not found');
+
         setCurrentUser(user);
-
-        const fetchedChat = await getChat(chat_id);
-        console.log('fetched chat data', fetchedChat);
-
-        if(!fetchedChat) {
-          throw new Error('Chat not found - no data returned');
-        } else if (!Array.isArray(fetchedChat) && fetchedChat.length === 0) {
-          throw new Error('Chat not found - empty array returned');
-        }
         setChat(fetchedChat[0]);
-
-        const chatMessages = await getMessages(chat_id);
-        if (Array.isArray(chatMessages)) {
-          setMessages(chatMessages);
-        }
-
+        setMessages(Array.isArray(chatMessages) ? chatMessages : []);
       } catch (error) {
         setError(error instanceof Error ? error.message : 'An error occurred');
         console.error('Initialization error:', error);
       } finally {
         setLoading(false);
       }
-    };
-
-    initializeChat();
+    })();
   }, [chat_id]);
 
-  const handleSendMessage = async () => {
+  return { loading, error, chat, currentUser, messages, setMessages };
+};
+
+const ChatPage = ({ params }: ChatPageProps) => {
+  const { chat_id } = use(params);
+  const [newMessage, setNewMessage] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const {
+    loading,
+    error,
+    chat,
+    currentUser,
+    messages,
+    setMessages,
+  } = useChatInitialization(chat_id);
+
+  const { sendWebSocketMessage } = useWebSocket();
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages.length]);
+
+  const handleSendMessage = useCallback(async () => {
     if (!newMessage.trim() || !chat || !currentUser) return;
 
+    const messageData: MessageProps = {
+      $id: `temp-${Date.now()}`,
+      sender: 'user',
+      content: newMessage,
+      chat_id,
+      user_id: currentUser.user_id,
+      timestamp: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, messageData]);
+    sendWebSocketMessage(messageData);
+    setNewMessage('');
+
     try {
-      const messageData = {
-        $id: `temp-${Date.now()}`,
-        sender: 'user',
-        content: newMessage,
-        chat_id: chat_id,
-        user_id: currentUser.user_id,
-        timestamp: new Date().toISOString()
-      };
-
-      setMessages(prev => [...prev, messageData])
-
-      if (wsRef.current) {
-        wsRef.current.send(JSON.stringify(messageData));
-      }
-
       const response = await sendMessage(chat_id, currentUser.user_id, newMessage);
-      console.log('Message sent successfully:', response);
-      setNewMessage('');
+      if (response) console.log(response);
+      Promise.allSettled([
+        sendAiMessage(chat_id, currentUser.user_id, newMessage),
+        chat.title === "New Chat" ? writeTitle(chat_id, newMessage) : null,
+      ]);
     } catch (error) {
       console.error('Error sending message:', error);
     }
-  };
+  }, [newMessage, chat, currentUser, chat_id, sendWebSocketMessage, setMessages]);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
-  };
+  }, [handleSendMessage]);
 
   if (error) {
     return (
@@ -173,9 +174,7 @@ const ChatPage = ({ params }: ChatPageProps) => {
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       <div className="bg-white shadow-sm p-4 flex items-center">
-        <h1 className="text-lg font-semibold">
-          {chat?.title || 'Chat'}
-        </h1>
+        <h1 className="text-lg font-semibold">{chat?.title || 'Chat'}</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -188,9 +187,7 @@ const ChatPage = ({ params }: ChatPageProps) => {
             {messages.map((msg) => (
               <div
                 key={msg.$id}
-                className={`flex flex-col ${
-                  msg.sender === 'user' ? 'items-end' : 'items-start'
-                }`}
+                className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
               >
                 <div
                   className={`p-3 rounded-lg break-words whitespace-pre-wrap ${
